@@ -57,13 +57,15 @@ struct Scene {
 		//Contains all the data needed to run the OpenGL pipeline:
 		struct Pipeline {
 			GLuint program = 0; //shader program; passed to glUseProgram
-
+			GLuint flatprogram = 0; //secondary shader program
 			//attributes:
 			GLuint vao = 0; //attrib->buffer mapping; passed to glBindVertexArray
+			GLuint trans = 0; //transparent bit
 
 			GLenum type = GL_TRIANGLES; //what sort of primitive to draw; passed to glDrawArrays
 			GLuint start = 0; //first vertex to draw; passed to glDrawArrays
 			GLuint count = 0; //number of vertices to draw; passed to glDrawArrays
+
 
 			//uniforms:
 			GLuint OBJECT_TO_CLIP_mat4 = -1U; //uniform location for object to clip space matrix

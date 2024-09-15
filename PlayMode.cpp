@@ -12,26 +12,42 @@
 
 #include <random>
 
-GLuint hexapod_meshes_for_lit_color_texture_program = 0;
-Load< MeshBuffer > hexapod_meshes(LoadTagDefault, []() -> MeshBuffer const * {
-	MeshBuffer const *ret = new MeshBuffer(data_path("hexapod.pnct"));
-	hexapod_meshes_for_lit_color_texture_program = ret->make_vao_for_program(lit_color_texture_program->program);
+GLuint alien_meshes_for_lit_color_texture_program = 0;
+Load< MeshBuffer > alien_meshes(LoadTagDefault, []() -> MeshBuffer const * {
+	MeshBuffer const *ret = new MeshBuffer(data_path("alien.pnct"));
+	alien_meshes_for_lit_color_texture_program = ret->make_vao_for_program(lit_color_texture_program->program);
 	return ret;
 });
 
-Load< Scene > hexapod_scene(LoadTagDefault, []() -> Scene const * {
-	return new Scene(data_path("hexapod.scene"), [&](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
-		Mesh const &mesh = hexapod_meshes->lookup(mesh_name);
+Load< Scene > alien_scene(LoadTagDefault, []() -> Scene const * {
+	return new Scene(data_path("alien.scene"), [&](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
+		Mesh const &mesh = alien_meshes->lookup(mesh_name);
 
-		scene.drawables.emplace_back(transform);
-		Scene::Drawable &drawable = scene.drawables.back();
+		if(mesh_name == "Helmet")
+		{
+			scene.drawables.emplace_front(transform);
+			Scene::Drawable &drawable = scene.drawables.front();
+			drawable.pipeline = lit_color_texture_program_pipeline;
+			
+			drawable.pipeline.vao = alien_meshes_for_lit_color_texture_program;
+			drawable.pipeline.type = mesh.type;
+			drawable.pipeline.start = mesh.start;
+			drawable.pipeline.count = mesh.count;
 
-		drawable.pipeline = lit_color_texture_program_pipeline;
+			drawable.pipeline.trans = 1; //set transparency to 1
+		}
+		else
+		{
+			scene.drawables.emplace_back(transform);
+			Scene::Drawable &drawable = scene.drawables.back();
+			drawable.pipeline = lit_color_texture_program_pipeline;
+			drawable.pipeline.vao = alien_meshes_for_lit_color_texture_program;
+			drawable.pipeline.type = mesh.type;
+			drawable.pipeline.start = mesh.start;
+			drawable.pipeline.count = mesh.count;
+		}
 
-		drawable.pipeline.vao = hexapod_meshes_for_lit_color_texture_program;
-		drawable.pipeline.type = mesh.type;
-		drawable.pipeline.start = mesh.start;
-		drawable.pipeline.count = mesh.count;
+		
 
 	});
 });
@@ -40,28 +56,34 @@ Load< Sound::Sample > dusty_floor_sample(LoadTagDefault, []() -> Sound::Sample c
 	return new Sound::Sample(data_path("dusty-floor.opus"));
 });
 
-PlayMode::PlayMode() : scene(*hexapod_scene) {
+Load< Sound::Sample > tatercry(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("Pickup_coin 25v2.wav"));
+});
+
+PlayMode::PlayMode() : scene(*alien_scene) {
 	//get pointers to leg for convenience:
 	for (auto &transform : scene.transforms) {
-		if (transform.name == "Hip.FL") hip = &transform;
-		else if (transform.name == "UpperLeg.FL") upper_leg = &transform;
-		else if (transform.name == "LowerLeg.FL") lower_leg = &transform;
+		if (transform.name == "Head") head = &transform;
+		else if (transform.name == "Body") body = &transform;
+		else if (transform.name == "Stem") plant = &transform;
+		else if (transform.name == "Mouth") closedmouth = &transform;
+		else if (transform.name == "Mouth2") openmouth = &transform;
 	}
-	if (hip == nullptr) throw std::runtime_error("Hip not found.");
-	if (upper_leg == nullptr) throw std::runtime_error("Upper leg not found.");
-	if (lower_leg == nullptr) throw std::runtime_error("Lower leg not found.");
-
-	hip_base_rotation = hip->rotation;
-	upper_leg_base_rotation = upper_leg->rotation;
-	lower_leg_base_rotation = lower_leg->rotation;
+	if (head == nullptr) throw std::runtime_error("Head not found.");
+	if (body == nullptr) throw std::runtime_error("Body not found.");
+	if (plant == nullptr) throw std::runtime_error("Stem not found.");
+	head_rotation = head->rotation;
+	body_rotation = body->rotation;
+	plant_rotation = plant->rotation;
+	openmouth -> scale = glm::vec3(0.0f, 0.0f, 0.0f);
 
 	//get pointer to camera for convenience:
 	if (scene.cameras.size() != 1) throw std::runtime_error("Expecting scene to have exactly one camera, but it has " + std::to_string(scene.cameras.size()));
 	camera = &scene.cameras.front();
-
+	head_tip_loop = Sound::play_3D(*tatercry, 1.0f, get_head_tip_position(), 10.0f);
 	//start music loop playing:
 	// (note: position will be over-ridden in update())
-	leg_tip_loop = Sound::loop_3D(*dusty_floor_sample, 1.0f, get_leg_tip_position(), 10.0f);
+	
 }
 
 PlayMode::~PlayMode() {
@@ -89,6 +111,20 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 			down.downs += 1;
 			down.pressed = true;
 			return true;
+		} else if (evt.key.keysym.sym == SDLK_UP) {
+			hup.downs += 1;
+			hup.pressed = true;
+			return true;
+		}
+		else if (evt.key.keysym.sym == SDLK_DOWN) {
+			hdown.downs += 1;
+			hdown.pressed = true;
+			return true;
+		}
+		else if (evt.key.keysym.sym == SDLK_SPACE) {
+			space.downs += 1;
+			space.pressed = true;
+			return true;
 		}
 	} else if (evt.type == SDL_KEYUP) {
 		if (evt.key.keysym.sym == SDLK_a) {
@@ -102,6 +138,17 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 			return true;
 		} else if (evt.key.keysym.sym == SDLK_s) {
 			down.pressed = false;
+			return true;
+		} else if (evt.key.keysym.sym == SDLK_UP) {
+			hup.pressed = false;
+			return true;
+		}
+		else if (evt.key.keysym.sym == SDLK_DOWN) {
+			hdown.pressed = false;
+			return true;
+		}
+		else if (evt.key.keysym.sym == SDLK_SPACE) {
+			space.pressed = false;
 			return true;
 		}
 	} else if (evt.type == SDL_MOUSEBUTTONDOWN) {
@@ -127,27 +174,122 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 	return false;
 }
 
+void squeak(float &squash, float elapsed, Scene::Transform *closedmouth, Scene::Transform *openmouth, Scene::Transform *body)
+{
+	if(squash >= 0.0f) //squash animation
+	{
+		squash -= elapsed;
+		openmouth -> scale = glm::vec3(1.0f, 1.0f, 1.0f);
+		closedmouth -> scale = glm::vec3(0.0f, 0.0f, 0.0f);
+		body -> scale.y = 0.25f * abs(sin( float(M_PI) *squash * 1.5f)) + 0.75f;
+		if(squash < 2.25f)
+		{
+			squash = -1.0f;
+			openmouth -> scale = glm::vec3(0.0f, 0.0f, 0.0f);
+			closedmouth -> scale = glm::vec3(1.0f, 1.0f, 1.0f);
+		}
+		
+	}
+
+}
+
+void wander(Scene::Transform *body, glm::vec3 &body_rotation, float randrotate, float &randtimer, float &randzmov, float elapsed)
+{
+	if(randtimer <= 0) //if it is no longer rotating
+	{
+		body -> position.z += 0.25f *randzmov;
+		randzmov -= elapsed;
+	}	
+	else//if it is rotating
+	{
+		body -> rotation = body_rotation * glm::angleAxis(
+		glm::radians(randrotate * float(M_PI)),
+		glm::vec3(0.0f, 1.0f, 0.0f ));
+		randtimer -= elapsed;
+	}
+}
+
+
 void PlayMode::update(float elapsed) {
 
-	//slowly rotates through [0,1):
 	wobble += elapsed / 10.0f;
-	wobble -= std::floor(wobble);
+	movtimer += elapsed;
+	if(record) //if it is recording increment the record timer 
+	rectime += elapsed;
+	
+	if(!record) //if it is not recording increment the timer
+	timer += elapsed;
 
-	hip->rotation = hip_base_rotation * glm::angleAxis(
-		glm::radians(5.0f * std::sin(wobble * 2.0f * float(M_PI))),
-		glm::vec3(0.0f, 1.0f, 0.0f)
-	);
-	upper_leg->rotation = upper_leg_base_rotation * glm::angleAxis(
-		glm::radians(7.0f * std::sin(wobble * 2.0f * 2.0f * float(M_PI))),
-		glm::vec3(0.0f, 0.0f, 1.0f)
-	);
-	lower_leg->rotation = lower_leg_base_rotation * glm::angleAxis(
-		glm::radians(10.0f * std::sin(wobble * 3.0f * 2.0f * float(M_PI))),
-		glm::vec3(0.0f, 0.0f, 1.0f)
-	);
+	if(int(movtimer) % 10 == 0) //if it has been 10 seconds
+	{
+		randrotate = ((rand()) / static_cast <float> (RAND_MAX)); //set randrotate to a random value
+		rotatetimer =  ((rand()) / static_cast <float> (RAND_MAX)) * 2.0f;
+	}
+	
 
+	body -> rotation = body_rotation * glm::angleAxis(
+		glm::radians(5.0f * std::sin(wobble * 5.0f  * float(M_PI))),
+		glm::vec3(1.0f, 0.0f, 0.0f ));
+	plant -> rotation = plant_rotation * glm::angleAxis(
+		glm::radians(15.0f * std::sin(wobble * 5.0f  * float(M_PI))),
+		glm::vec3(1.0f, 0.0f, 0.0f ));
+
+	if(!record && !soundrec.empty()) //if the record button is not pressed and soundrec is not empty
+	{
+		
+		auto it = soundrec.begin(); //iterator that points to the first element
+		if(timer >= *it) //if timer is greater than or equal to this element
+		{
+			head_tip_loop = Sound::play_3D(*tatercry, 1.0f, get_head_tip_position(), 10.0f); //play the sound
+			float sendback = *it;
+			soundrec.erase(it);
+			soundrec.emplace_back(sendback); //erase the time from the front and send it to the back
+			timer = 0.0f;
+			squash = 2.5f;
+		}
+		
+
+	}
+
+
+
+	if(space.pressed && squash == -1.0f) //if you squish the creature
+	{
+		squash = 2.5f;
+
+		head_tip_loop = Sound::play_3D(*tatercry, 1.0f, get_head_tip_position(), 10.0f);
+
+		if(record)
+		{
+			soundrec.emplace_back(rectime); //put it back in soundrec
+			rectime = 0.0f; //reset the recording time
+		}
+		
+	}
+
+	if(hdown.pressed) //if the record button is pressed, set the flags
+	{
+		if(!record) //if it is not already recording, begin to record
+		{
+			record = 1;
+			rectime = 0.0f;
+			soundrec.clear(); //clear the sound list
+		}
+	}
+	if(hup.pressed)
+	{
+		if(record) //if it is already recording end the record
+		{
+			record = 0;
+			timer = 0.0f;
+		}
+	}
+	
+	squeak(squash,elapsed,closedmouth,openmouth,body);
+
+	
 	//move sound to follow leg tip position:
-	leg_tip_loop->set_position(get_leg_tip_position(), 1.0f / 60.0f);
+	head_tip_loop->set_position(get_head_tip_position(), 1.0f / 60.0f); 
 
 	//move camera:
 	{
@@ -178,11 +320,18 @@ void PlayMode::update(float elapsed) {
 		Sound::listener.set_position_right(frame_at, frame_right, 1.0f / 60.0f);
 	}
 
+
+	//if 1 is pressed create a new monster 
+
+
 	//reset button press counters:
 	left.downs = 0;
 	right.downs = 0;
 	up.downs = 0;
 	down.downs = 0;
+	space.downs = 0;
+	hdown.downs = 0;
+	hup.downs = 0;
 }
 
 void PlayMode::draw(glm::uvec2 const &drawable_size) {
@@ -193,11 +342,19 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 	// TODO: consider using the Light(s) in the scene to do this
 	glUseProgram(lit_color_texture_program->program);
 	glUniform1i(lit_color_texture_program->LIGHT_TYPE_int, 1);
-	glUniform3fv(lit_color_texture_program->LIGHT_DIRECTION_vec3, 1, glm::value_ptr(glm::vec3(0.0f, 0.0f,-1.0f)));
+	glUniform3fv(lit_color_texture_program->LIGHT_DIRECTION_vec3, 1, glm::value_ptr(glm::vec3(-1.0f, -1.0f,1.0f)));
 	glUniform3fv(lit_color_texture_program->LIGHT_ENERGY_vec3, 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 0.95f)));
 	glUseProgram(0);
 
-	glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
+
+	glUseProgram(lit_color_texture_program->flatprogram);
+	glUniform1i(lit_color_texture_program->LIGHT_TYPE_int, 1);
+	glUniform3fv(lit_color_texture_program->LIGHT_DIRECTION_vec3, 1, glm::value_ptr(glm::vec3(-1.0f, -1.0f,1.0f)));
+	glUniform3fv(lit_color_texture_program->LIGHT_ENERGY_vec3, 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 0.95f)));
+	glUseProgram(0);
+
+	
+	glClearColor(0.094f, 0.043f, 0.38f, 1.0f);
 	glClearDepth(1.0f); //1.0 is actually the default value to clear the depth buffer to, but FYI you can change it.
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -230,7 +387,7 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 	GL_ERRORS();
 }
 
-glm::vec3 PlayMode::get_leg_tip_position() {
+glm::vec3 PlayMode::get_head_tip_position() {
 	//the vertex position here was read from the model in blender:
-	return lower_leg->make_local_to_world() * glm::vec4(-1.26137f, -11.861f, 0.0f, 1.0f);
+	return head->make_local_to_world() * glm::vec4(1.98215f, 1.73985f, 0.0f, 1.0f);
 }

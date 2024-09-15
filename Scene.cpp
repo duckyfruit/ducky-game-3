@@ -103,7 +103,17 @@ void Scene::draw(glm::mat4 const &world_to_clip, glm::mat4x3 const &world_to_lig
 
 
 		//Set shader program:
-		glUseProgram(pipeline.program);
+		if(pipeline.trans == 1) //if the transparency bit is set
+		{
+			glDisable(GL_DEPTH_TEST);
+			glUseProgram(pipeline.flatprogram);
+		}
+		else
+		{
+			glEnable(GL_DEPTH_TEST);
+			glUseProgram(pipeline.program);
+		}
+
 
 		//Set attribute sources:
 		glBindVertexArray(pipeline.vao);

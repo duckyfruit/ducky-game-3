@@ -10,6 +10,9 @@ struct LitColorTextureProgram {
 	~LitColorTextureProgram();
 
 	GLuint program = 0;
+	GLuint flatprogram = 0;
+
+	
 
 	//Attribute (per-vertex variable) locations:
 	GLuint Position_vec4 = -1U;
@@ -32,6 +35,9 @@ struct LitColorTextureProgram {
 	//Textures:
 	//TEXTURE0 - texture that is accessed by TexCoord
 };
+
+
+
 
 extern Load< LitColorTextureProgram > lit_color_texture_program;
 
