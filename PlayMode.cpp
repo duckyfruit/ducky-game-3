@@ -22,9 +22,12 @@ Load< MeshBuffer > alien_meshes(LoadTagDefault, []() -> MeshBuffer const * {
 Load< Scene > alien_scene(LoadTagDefault, []() -> Scene const * {
 	return new Scene(data_path("alien.scene"), [&](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
 		Mesh const &mesh = alien_meshes->lookup(mesh_name);
-
-		if(mesh_name == "Helmet")
+		std::cout <<mesh_name;
+		std::cout << "\n";
+		std::string helmetname = "Helmet";
+		if(!(mesh_name.find(helmetname)))
 		{
+			
 			scene.drawables.emplace_front(transform);
 			Scene::Drawable &drawable = scene.drawables.front();
 			drawable.pipeline = lit_color_texture_program_pipeline;
@@ -60,27 +63,62 @@ Load< Sound::Sample > tatercry(LoadTagDefault, []() -> Sound::Sample const * {
 	return new Sound::Sample(data_path("Pickup_coin 25v2.wav"));
 });
 
+Load< Sound::Sample > boopscry(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("Laser_shoot 14.wav"));
+});
+
+Load< Sound::Sample > ambience(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("Space Ambience.wav"));
+});
+
+
+
 PlayMode::PlayMode() : scene(*alien_scene) {
 	//get pointers to leg for convenience:
 	for (auto &transform : scene.transforms) {
-		if (transform.name == "Head") head = &transform;
-		else if (transform.name == "Body") body = &transform;
-		else if (transform.name == "Stem") plant = &transform;
-		else if (transform.name == "Mouth") closedmouth = &transform;
-		else if (transform.name == "Mouth2") openmouth = &transform;
+		if (transform.name == "taterHead") taterhead = &transform;
+		else if (transform.name == "taterBody") taterbody = &transform;
+		else if (transform.name == "taterStem") taterplant = &transform;
+		else if (transform.name == "taterClosedMouth") taterclosedmouth = &transform;
+		else if (transform.name == "taterOpenMouth") tateropenmouth = &transform;
+		else if (transform.name == "boopsBody") boopsbody = &transform;
+		else if (transform.name == "boopsHead") boopshead = &transform;
+		else if (transform.name == "boopsClosedMouth") boopsclosedmouth = &transform;
+		else if (transform.name == "boopsOpenMouth") boopsopenmouth = &transform;
+		else if (transform.name == "boopsRArm") boopsRarm = &transform;
+		else if (transform.name == "boopsLArm") boopsLarm = &transform;
+		else if (transform.name == "boopsRAnkle") boopsRankle = &transform;
+		else if (transform.name == "boopsLAnkle") boopsLankle = &transform;
+		else if (transform.name == "boopsCEyes") boopsclosedeye = &transform;
+		else if (transform.name == "boopsOEyes") boopsopeneye = &transform;
+		else if (transform.name == "boopsTail") boopstail = &transform;
 	}
-	if (head == nullptr) throw std::runtime_error("Head not found.");
-	if (body == nullptr) throw std::runtime_error("Body not found.");
-	if (plant == nullptr) throw std::runtime_error("Stem not found.");
-	head_rotation = head->rotation;
-	body_rotation = body->rotation;
-	plant_rotation = plant->rotation;
-	openmouth -> scale = glm::vec3(0.0f, 0.0f, 0.0f);
+	if (taterhead == nullptr) throw std::runtime_error("Head not found.");
+	if (taterbody == nullptr) throw std::runtime_error("Body not found.");
+	if (taterplant == nullptr) throw std::runtime_error("Stem not found.");
+	tater_head_rotation = taterhead->rotation;
+	tater_body_rotation = taterbody->rotation;
+	tater_plant_rotation = taterplant->rotation;
+	tateropenmouth -> scale = glm::vec3(0.0f, 0.0f, 0.0f);
+
+
+	boops_body_rotation = boopsbody->rotation;
+	boops_head_rotation = boopshead->rotation;
+	boops_Rarm_rotation = boopsRarm->rotation;
+	boops_Larm_rotation = boopsLarm->rotation;
+	boops_Rankle_rotation = boopsRankle->rotation;
+	boops_Lankle_rotation = boopsLankle->rotation;
+	boops_tail_rotation = boopstail->rotation;
+	boopsopenmouth -> scale = glm::vec3(0.0f, 0.0f, 0.0f);
+	boopsclosedeye -> scale = glm::vec3(0.0f, 0.0f, 0.0f);
+	boops_body_position = boopsbody -> position;
 
 	//get pointer to camera for convenience:
 	if (scene.cameras.size() != 1) throw std::runtime_error("Expecting scene to have exactly one camera, but it has " + std::to_string(scene.cameras.size()));
 	camera = &scene.cameras.front();
-	head_tip_loop = Sound::play_3D(*tatercry, 1.0f, get_head_tip_position(), 10.0f);
+	tater_head_tip_loop = Sound::play_3D(*tatercry, 0.0f, get_tater_head_tip_position(), 10.0f);
+	boops_head_tip_loop = Sound::play_3D(*boopscry, 0.0f, get_boops_head_tip_position(), 10.0f);
+	Sound::loop(*ambience, 0.25f, 0.0f);
 	//start music loop playing:
 	// (note: position will be over-ridden in update())
 	
@@ -121,7 +159,15 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 			hdown.pressed = true;
 			return true;
 		}
-		else if (evt.key.keysym.sym == SDLK_SPACE) {
+		else if (evt.key.keysym.sym == SDLK_LEFT) {
+			hleft.downs += 1;
+			hleft.pressed = true;
+			return true;
+		} else if (evt.key.keysym.sym == SDLK_RIGHT) {
+			hright.downs += 1;
+			hright.pressed = true;
+			return true;
+		}else if (evt.key.keysym.sym == SDLK_SPACE) {
 			space.downs += 1;
 			space.pressed = true;
 			return true;
@@ -145,6 +191,13 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 		}
 		else if (evt.key.keysym.sym == SDLK_DOWN) {
 			hdown.pressed = false;
+			return true;
+		}
+		 else if (evt.key.keysym.sym == SDLK_LEFT) {
+			hleft.pressed = false;
+			return true;
+		} else if (evt.key.keysym.sym == SDLK_RIGHT) {
+			hright.pressed = false;
 			return true;
 		}
 		else if (evt.key.keysym.sym == SDLK_SPACE) {
@@ -174,17 +227,17 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 	return false;
 }
 
-void squeak(float &squash, float elapsed, Scene::Transform *closedmouth, Scene::Transform *openmouth, Scene::Transform *body)
+void tater_squeak(float &tatersquash, float elapsed, Scene::Transform *closedmouth, Scene::Transform *openmouth, Scene::Transform *body)
 {
-	if(squash >= 0.0f) //squash animation
+	if(tatersquash >= 0.0f) //tatersquash animation
 	{
-		squash -= elapsed;
+		tatersquash -= elapsed;
 		openmouth -> scale = glm::vec3(1.0f, 1.0f, 1.0f);
 		closedmouth -> scale = glm::vec3(0.0f, 0.0f, 0.0f);
-		body -> scale.y = 0.25f * abs(sin( float(M_PI) *squash * 1.5f)) + 0.75f;
-		if(squash < 2.25f)
+		body -> scale.y = 0.25f * abs(sin( float(M_PI) *tatersquash * 1.5f)) + 0.75f;
+		if(tatersquash < 2.25f)
 		{
-			squash = -1.0f;
+			tatersquash = -1.0f;
 			openmouth -> scale = glm::vec3(0.0f, 0.0f, 0.0f);
 			closedmouth -> scale = glm::vec3(1.0f, 1.0f, 1.0f);
 		}
@@ -193,81 +246,183 @@ void squeak(float &squash, float elapsed, Scene::Transform *closedmouth, Scene::
 
 }
 
-void wander(Scene::Transform *body, glm::vec3 &body_rotation, float randrotate, float &randtimer, float &randzmov, float elapsed)
+void boops_squeak(float &boopssquash, float elapsed, Scene::Transform *closedmouth, Scene::Transform 
+				*openmouth,Scene::Transform *closedeye, Scene::Transform *openeye, Scene::Transform *body,
+				Scene::Transform *Rarm, Scene::Transform *Larm, glm::quat Rarm_rotation,glm::quat Larm_rotation )
 {
-	if(randtimer <= 0) //if it is no longer rotating
+		if(boopssquash >= 0.0f) //boopssquash animation
 	{
-		body -> position.z += 0.25f *randzmov;
-		randzmov -= elapsed;
-	}	
-	else//if it is rotating
-	{
-		body -> rotation = body_rotation * glm::angleAxis(
-		glm::radians(randrotate * float(M_PI)),
-		glm::vec3(0.0f, 1.0f, 0.0f ));
-		randtimer -= elapsed;
+		boopssquash -= elapsed;
+		openmouth -> scale = glm::vec3(1.0f, 1.0f, 1.0f);
+		closedmouth -> scale = glm::vec3(0.0f, 0.0f, 0.0f);
+		openeye -> scale = glm::vec3(0.0f, 0.0f, 0.0f);
+		closedeye -> scale = glm::vec3(1.0f, 1.0f, 1.0f);
+		body -> scale.y = 0.125f * abs(sin( float(M_PI) *boopssquash * 1.5f)) + 1.0f;
+		Rarm -> rotation = Rarm_rotation * glm::angleAxis(
+		glm::radians((-15.0f * std::sin(boopssquash * 2.0f  * float(M_PI)))+65.0f),
+		glm::vec3(0.0f, 0.0f, 1.0f ));
+		Larm -> rotation = Larm_rotation * glm::angleAxis(
+		glm::radians((-15.0f * std::sin(boopssquash * -2.0f  * float(M_PI)))-65.0f),
+		glm::vec3(0.0f, 0.0f, 1.0f ));
+
+		if(boopssquash <= 1.33f)
+		{
+			
+			boopssquash = -1.0f;
+			openmouth -> scale = glm::vec3(0.0f, 0.0f, 0.0f);
+			closedmouth -> scale = glm::vec3(1.0f, 1.0f, 1.0f);
+			openeye-> scale = glm::vec3(1.0f, 1.0f, 1.0f);
+			closedeye-> scale = glm::vec3(0.0f, 0.0f, 0.0f);
+		}
+		
 	}
 }
+
 
 
 void PlayMode::update(float elapsed) {
 
 	wobble += elapsed / 10.0f;
-	movtimer += elapsed;
-	if(record) //if it is recording increment the record timer 
+	timer -= elapsed;
+
+	if(hleft.pressed)
+	selector = 0;
+	if(hright.pressed)
+	selector = 1;
+
+	
+	//movtimer += elapsed;
+	/*if(record) //if it is recording increment the record timer 
 	rectime += elapsed;
 	
 	if(!record) //if it is not recording increment the timer
-	timer += elapsed;
+	timer += elapsed; */
 
-	if(int(movtimer) % 10 == 0) //if it has been 10 seconds
-	{
-		randrotate = ((rand()) / static_cast <float> (RAND_MAX)); //set randrotate to a random value
-		rotatetimer =  ((rand()) / static_cast <float> (RAND_MAX)) * 2.0f;
-	}
 	
+	
+	//tater idle
 
-	body -> rotation = body_rotation * glm::angleAxis(
+	taterbody -> rotation = tater_body_rotation * glm::angleAxis(
 		glm::radians(5.0f * std::sin(wobble * 5.0f  * float(M_PI))),
 		glm::vec3(1.0f, 0.0f, 0.0f ));
-	plant -> rotation = plant_rotation * glm::angleAxis(
+	taterplant -> rotation = tater_plant_rotation * glm::angleAxis(
 		glm::radians(15.0f * std::sin(wobble * 5.0f  * float(M_PI))),
 		glm::vec3(1.0f, 0.0f, 0.0f ));
 
-	if(!record && !soundrec.empty()) //if the record button is not pressed and soundrec is not empty
+
+	//boops idle
+	boopsRarm -> rotation = boops_Rarm_rotation * glm::angleAxis(
+		glm::radians(5.0f * std::sin(wobble * 5.0f  * float(M_PI))),
+		glm::vec3(0.0f, 0.0f, 1.0f ));
+
+	boopsLarm -> rotation = boops_Larm_rotation * glm::angleAxis(
+		glm::radians(5.0f * std::sin(wobble * -5.0f  * float(M_PI))),
+		glm::vec3(0.0f, 0.0f, 1.0f ));
+
+	boopsRankle -> rotation = boops_Rankle_rotation * glm::angleAxis(
+		glm::radians(10.0f * std::sin(wobble * 5.0f  * float(M_PI))),
+		glm::vec3(0.0f, 0.0f, 1.0f ));
+
+	boopsLankle -> rotation = boops_Lankle_rotation * glm::angleAxis(
+		glm::radians(10.0f * std::sin(wobble * -5.0f  * float(M_PI))),
+		glm::vec3(0.0f, 0.0f, 1.0f ));
+
+	boopstail -> rotation = boops_tail_rotation * glm::angleAxis(
+		glm::radians((50.0f * std::sin(wobble * 7.5f  * float(M_PI))) - 0.0f),
+		glm::vec3(0.0f, 0.0f, 1.0f ));
+
+	boopsbody -> position = boops_body_position  * glm::angleAxis(
+		glm::radians(std::sin(wobble * -5.0f  * float(M_PI))),
+		glm::vec3(0.0f, 0.0f, 1.0f ));
+
+
+	/*if(!record && !soundrec.empty()) //if the record button is not pressed and soundrec is not empty
 	{
 		
 		auto it = soundrec.begin(); //iterator that points to the first element
 		if(timer >= *it) //if timer is greater than or equal to this element
 		{
-			head_tip_loop = Sound::play_3D(*tatercry, 1.0f, get_head_tip_position(), 10.0f); //play the sound
+			tater_head_tip_loop = Sound::play_3D(*tatercry, 1.0f, get_tater_head_tip_position(), 10.0f); //play the sound
 			float sendback = *it;
 			soundrec.erase(it);
 			soundrec.emplace_back(sendback); //erase the time from the front and send it to the back
 			timer = 0.0f;
-			squash = 2.5f;
+			tatersquash = 2.5f;
 		}
 		
 
-	}
+	} */
 
-
-
-	if(space.pressed && squash == -1.0f) //if you squish the creature
+	if(simonsays && player.empty())
 	{
-		squash = 2.5f;
-
-		head_tip_loop = Sound::play_3D(*tatercry, 1.0f, get_head_tip_position(), 10.0f);
-
-		if(record)
+		simon.emplace_back(rand()%2);
+		simonsays = false;
+		timer = 1.0f;
+	}
+	else if(!simon.empty() && !simonsays) //if the simon says vectoris not empty, we still have to play the sounds
+	{
+		auto it = simon.begin();
+		if(timer <= 0.0f) //if the timer has run out
 		{
-			soundrec.emplace_back(rectime); //put it back in soundrec
-			rectime = 0.0f; //reset the recording time
+			if(*it == 0)
+			{
+				boops_head_tip_loop = Sound::play_3D(*boopscry, 1.0f, get_boops_head_tip_position(), 10.0f); //play the sound
+				boopssquash = 2.0f;
+			}
+			else if(*it == 1)
+			{
+				tater_head_tip_loop = Sound::play_3D(*tatercry, 1.0f, get_tater_head_tip_position(), 10.0f); //play the sound
+				tatersquash = 2.5f;
+
+			}
+			
+			
+			int sendback = *it;
+			simon.erase(it);
+			player.emplace_back(sendback); //erase the time from the front and send it to the back
+			timer = 1.0f;
+			
+		}
+
+	}
+	else //let the player guess the input
+	{
+		simonsays = true;
+		if(space.pressed && tatersquash == -1.0f && boopssquash == -1.0f) //if you squish the creature
+		{
+			auto it = player.begin();
+			if(*it == 1)
+			{
+				tatersquash = 2.5f;
+				tater_head_tip_loop = Sound::play_3D(*tatercry, 1.0f, get_tater_head_tip_position(), 10.0f);
+			}
+			else if(*it == 0)
+			{	
+				boopssquash = 2.0f;
+				boops_head_tip_loop = Sound::play_3D(*boopscry, 1.0f, get_boops_head_tip_position(), 10.0f);
+			}
+
+			if(selector == *it) //if the player is right continue on
+			{
+				int sendback = *it;
+				player.erase(it);
+				simon.emplace_back(sendback); //erase the time from the front and send it to the back
+			}
+			else //if the player is wrong then start over
+			{
+				player.clear();
+				simon.clear();
+			}
+			
 		}
 		
 	}
 
-	if(hdown.pressed) //if the record button is pressed, set the flags
+	
+	
+
+
+	/*if(hdown.pressed) //if the record button is pressed, set the flags
 	{
 		if(!record) //if it is not already recording, begin to record
 		{
@@ -283,14 +438,16 @@ void PlayMode::update(float elapsed) {
 			record = 0;
 			timer = 0.0f;
 		}
-	}
+	} */
 	
-	squeak(squash,elapsed,closedmouth,openmouth,body);
-
+	tater_squeak(tatersquash,elapsed,taterclosedmouth,tateropenmouth,taterbody);
+	
+	boops_squeak(boopssquash,elapsed,boopsclosedmouth,boopsopenmouth,boopsclosedeye,boopsopeneye,boopsbody, boopsRarm, boopsLarm, boops_Rarm_rotation, boops_Larm_rotation);
 	
 	//move sound to follow leg tip position:
-	head_tip_loop->set_position(get_head_tip_position(), 1.0f / 60.0f); 
+	tater_head_tip_loop->set_position(get_tater_head_tip_position(), 1.0f / 60.0f); 
 
+	boops_head_tip_loop->set_position(get_boops_head_tip_position(), 1.0f / 60.0f); 
 	//move camera:
 	{
 
@@ -332,6 +489,8 @@ void PlayMode::update(float elapsed) {
 	space.downs = 0;
 	hdown.downs = 0;
 	hup.downs = 0;
+	hleft.downs = 0;
+	hright.downs = 0;
 }
 
 void PlayMode::draw(glm::uvec2 const &drawable_size) {
@@ -342,7 +501,7 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 	// TODO: consider using the Light(s) in the scene to do this
 	glUseProgram(lit_color_texture_program->program);
 	glUniform1i(lit_color_texture_program->LIGHT_TYPE_int, 1);
-	glUniform3fv(lit_color_texture_program->LIGHT_DIRECTION_vec3, 1, glm::value_ptr(glm::vec3(-1.0f, -1.0f,1.0f)));
+	glUniform3fv(lit_color_texture_program->LIGHT_DIRECTION_vec3, 1, glm::value_ptr(glm::vec3(0.0f, -1.0f,1.0f)));
 	glUniform3fv(lit_color_texture_program->LIGHT_ENERGY_vec3, 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 0.95f)));
 	glUseProgram(0);
 
@@ -354,7 +513,7 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 	glUseProgram(0);
 
 	
-	glClearColor(0.094f, 0.043f, 0.38f, 1.0f);
+	glClearColor(0.02f, 0.02f, 0.2f, 1.0f);
 	glClearDepth(1.0f); //1.0 is actually the default value to clear the depth buffer to, but FYI you can change it.
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -387,7 +546,14 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 	GL_ERRORS();
 }
 
-glm::vec3 PlayMode::get_head_tip_position() {
+glm::vec3 PlayMode::get_tater_head_tip_position() {
 	//the vertex position here was read from the model in blender:
-	return head->make_local_to_world() * glm::vec4(1.98215f, 1.73985f, 0.0f, 1.0f);
+	return taterhead->make_local_to_world() * glm::vec4(1.98215f, 1.73985f, 0.0f, 1.0f);
 }
+
+
+glm::vec3 PlayMode::get_boops_head_tip_position() {
+	//the vertex position here was read from the model in blender:
+	return boopshead->make_local_to_world() * glm::vec4(0.0f, 2.2f, 2.2f, 1.0f);
+}
+
