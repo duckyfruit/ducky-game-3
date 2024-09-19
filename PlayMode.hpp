@@ -65,22 +65,56 @@ struct PlayMode : Mode {
 	glm::quat boops_tail_rotation;
 	glm::vec3 boops_body_position;
 
+	Scene::Transform *clydebody = nullptr;
+	Scene::Transform *clydehead = nullptr;
+	Scene::Transform *clydeopenmouth = nullptr;
+	Scene::Transform *clydeRopeneye = nullptr;
+	Scene::Transform *clydeLopeneye = nullptr;
+	Scene::Transform *clydeRclosedeye = nullptr;
+	Scene::Transform *clydeLclosedeye = nullptr;
+	Scene::Transform *clydeclosedmouth = nullptr;
+	Scene::Transform *clydeReyestalk = nullptr;
+	Scene::Transform *clydeLeyestalk  = nullptr;
+	Scene::Transform *clydeRarm = nullptr;
+	Scene::Transform *clydeLarm = nullptr;
+	Scene::Transform *clydeFRleg = nullptr;
+	Scene::Transform *clydeFLleg = nullptr;
+	Scene::Transform *clydeTRleg = nullptr;
+	Scene::Transform *clydeTLleg = nullptr;
+	Scene::Transform *clydeBRleg = nullptr;
+	Scene::Transform *clydeBLleg = nullptr;
+	glm::quat clyde_head_rotation;
+	glm::quat clyde_body_rotation;
+	glm::quat clyde_Rarm_rotation;
+	glm::quat clyde_Larm_rotation;
+	glm::quat clyde_Reyestalk_rotation;
+	glm::quat clyde_Leyestalk_rotation;
+	glm::quat clyde_FRleg_rotation;
+	glm::quat clyde_FLleg_rotation;
+	glm::quat clyde_TRleg_rotation;
+	glm::quat clyde_TLleg_rotation;
+	glm::quat clyde_BRleg_rotation;
+	glm::quat clyde_BLleg_rotation;
+	glm::vec3 clyde_body_position;
+
 	float wobble = 0.0f;
 	float tatersquash = -1.0f;
 	float boopssquash = -1.0f;
+	float clydesquash = -1.0f;
 
 	glm::vec3 get_tater_head_tip_position();
 	glm::vec3 get_boops_head_tip_position();
+	glm::vec3 get_clyde_head_tip_position();
 
-	int record = 0;
-	float rectime = 0.0f;
+
 	float timer = 1.0f;
-	float movtimer = 0.0f;
-	float rotatetimer = 0.0f;
+	float selectortimer = 0.5f;
+
 
 	//music coming from the tip of the leg (as a demonstration):
 	std::shared_ptr< Sound::PlayingSample > tater_head_tip_loop;
 	std::shared_ptr< Sound::PlayingSample > boops_head_tip_loop;
+	std::shared_ptr< Sound::PlayingSample > clyde_head_tip_loop;
 	
 	//camera:
 	Scene::Camera *camera = nullptr;

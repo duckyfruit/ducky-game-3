@@ -67,6 +67,11 @@ Load< Sound::Sample > boopscry(LoadTagDefault, []() -> Sound::Sample const * {
 	return new Sound::Sample(data_path("Laser_shoot 14.wav"));
 });
 
+
+Load< Sound::Sample > clydecry(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("clydecry.wav"));
+});
+
 Load< Sound::Sample > ambience(LoadTagDefault, []() -> Sound::Sample const * {
 	return new Sound::Sample(data_path("Space Ambience.wav"));
 });
@@ -92,10 +97,25 @@ PlayMode::PlayMode() : scene(*alien_scene) {
 		else if (transform.name == "boopsCEyes") boopsclosedeye = &transform;
 		else if (transform.name == "boopsOEyes") boopsopeneye = &transform;
 		else if (transform.name == "boopsTail") boopstail = &transform;
+		else if (transform.name == "clydebody") clydebody = &transform;
+		else if (transform.name == "clydehead") clydehead = &transform;
+		else if (transform.name == "clydeclosedmouth") clydeclosedmouth = &transform;
+		else if (transform.name == "clydemouthopen") clydeopenmouth = &transform;
+		else if (transform.name == "clydeRarm") clydeRarm = &transform;
+		else if (transform.name == "clydeLarm") clydeLarm = &transform;
+		else if (transform.name == "clydeFRleg") clydeFRleg = &transform;
+		else if (transform.name == "clydeFLleg") clydeFLleg = &transform;
+		else if (transform.name == "clydeTRleg") clydeTRleg = &transform;
+		else if (transform.name == "clydeTLleg") clydeTLleg = &transform;
+		else if (transform.name == "clydeBRleg") clydeBRleg = &transform;
+		else if (transform.name == "clydeBLleg") clydeBLleg = &transform;
+		else if (transform.name == "clydeReyeclosed") clydeRclosedeye = &transform;
+		else if (transform.name == "clydeLeyeclosed") clydeLclosedeye = &transform;
+		else if (transform.name == "clydeRopeneye") clydeRopeneye = &transform;
+		else if (transform.name == "clydeLopeneye") clydeLopeneye = &transform;
+		else if (transform.name == "clydeReyestalk") clydeReyestalk = &transform;
+		else if (transform.name == "clydeLeyestalk") clydeLeyestalk= &transform;
 	}
-	if (taterhead == nullptr) throw std::runtime_error("Head not found.");
-	if (taterbody == nullptr) throw std::runtime_error("Body not found.");
-	if (taterplant == nullptr) throw std::runtime_error("Stem not found.");
 	tater_head_rotation = taterhead->rotation;
 	tater_body_rotation = taterbody->rotation;
 	tater_plant_rotation = taterplant->rotation;
@@ -113,11 +133,31 @@ PlayMode::PlayMode() : scene(*alien_scene) {
 	boopsclosedeye -> scale = glm::vec3(0.0f, 0.0f, 0.0f);
 	boops_body_position = boopsbody -> position;
 
+
+	clyde_body_rotation = clydebody->rotation;
+	clyde_head_rotation = clydehead->rotation;
+	clyde_Rarm_rotation = clydeRarm->rotation;
+	clyde_Larm_rotation = clydeLarm->rotation;
+	clyde_FRleg_rotation = clydeFRleg->rotation;
+	clyde_FLleg_rotation = clydeFLleg->rotation;
+	clyde_TRleg_rotation = clydeTRleg->rotation;
+	clyde_TLleg_rotation = clydeTLleg->rotation;
+	clyde_BRleg_rotation = clydeBRleg->rotation;
+	clyde_BLleg_rotation = clydeBLleg->rotation;
+	clyde_Reyestalk_rotation = clydeReyestalk->rotation;
+	clyde_Leyestalk_rotation = clydeLeyestalk->rotation;
+	clydeopenmouth -> scale = glm::vec3(0.0f, 0.0f, 0.0f);
+	clydeRclosedeye -> scale = glm::vec3(0.0f, 0.0f, 0.0f);
+	clydeLclosedeye -> scale = glm::vec3(0.0f, 0.0f, 0.0f);
+	clyde_body_position = clydebody -> position;
+
+
 	//get pointer to camera for convenience:
 	if (scene.cameras.size() != 1) throw std::runtime_error("Expecting scene to have exactly one camera, but it has " + std::to_string(scene.cameras.size()));
 	camera = &scene.cameras.front();
 	tater_head_tip_loop = Sound::play_3D(*tatercry, 0.0f, get_tater_head_tip_position(), 10.0f);
 	boops_head_tip_loop = Sound::play_3D(*boopscry, 0.0f, get_boops_head_tip_position(), 10.0f);
+	clyde_head_tip_loop = Sound::play_3D(*clydecry, 0.0f, get_clyde_head_tip_position(), 10.0f);
 	Sound::loop(*ambience, 0.25f, 0.0f);
 	//start music loop playing:
 	// (note: position will be over-ridden in update())
@@ -278,17 +318,55 @@ void boops_squeak(float &boopssquash, float elapsed, Scene::Transform *closedmou
 	}
 }
 
+void clyde_squeak(float &clydesquash, float elapsed, Scene::Transform *closedmouth, Scene::Transform 
+				*openmouth,Scene::Transform *Rclosedeye, Scene::Transform *Lclosedeye,  Scene::Transform *Ropeneye, Scene::Transform *Lopeneye, Scene::Transform *body,
+				Scene::Transform *Rarm, Scene::Transform *Larm, glm::quat Rarm_rotation,glm::quat Larm_rotation )
+{
+		if(clydesquash >= 0.0f) //clydesquash animation
+	{
+		clydesquash -= elapsed;
+		openmouth -> scale = glm::vec3(1.0f, 1.0f, 1.0f);
+		closedmouth -> scale = glm::vec3(0.0f, 0.0f, 0.0f);
+		Ropeneye -> scale = glm::vec3(0.0f, 0.0f, 0.0f);
+		Lopeneye -> scale = glm::vec3(0.0f, 0.0f, 0.0f);
+		Rclosedeye -> scale = glm::vec3(1.0f, 1.0f, 1.0f);
+		Lclosedeye -> scale = glm::vec3(1.0f, 1.0f, 1.0f);
+		body -> scale.y = 0.25f * abs(sin( float(M_PI) *clydesquash * 1.5f)) + 0.75f;
+
+		if(clydesquash <= 2.25f)
+		{
+			
+			clydesquash = -1.0f;
+			openmouth -> scale = glm::vec3(0.0f, 0.0f, 0.0f);
+			closedmouth -> scale = glm::vec3(1.0f, 1.0f, 1.0f);
+			Ropeneye-> scale = glm::vec3(1.0f, 1.0f, 1.0f);
+			Lopeneye-> scale = glm::vec3(1.0f, 1.0f, 1.0f);
+			Rclosedeye-> scale = glm::vec3(0.0f, 0.0f, 0.0f);
+			Lclosedeye-> scale = glm::vec3(0.0f, 0.0f, 0.0f);
+		}
+		
+	}
+}
+
 
 
 void PlayMode::update(float elapsed) {
 
 	wobble += elapsed / 10.0f;
 	timer -= elapsed;
+	selectortimer -= elapsed;
 
-	if(hleft.pressed)
-	selector = 0;
-	if(hright.pressed)
-	selector = 1;
+	if(hleft.pressed && (selector > 0) && selectortimer <= 0.0f)
+	{
+		selector -= 1;
+		selectortimer = 0.5f;
+	}
+	
+	if(hright.pressed && (selector < 2) && selectortimer <= 0.0f)
+	{
+		selector += 1;
+		selectortimer = 0.5f;
+	}
 
 	
 	//movtimer += elapsed;
@@ -336,6 +414,54 @@ void PlayMode::update(float elapsed) {
 		glm::vec3(0.0f, 0.0f, 1.0f ));
 
 
+	//clyde idle
+
+	clydeRarm -> rotation = clyde_Rarm_rotation * glm::angleAxis(
+		glm::radians(5.0f * std::sin(wobble * 5.0f  * float(M_PI))),
+		glm::vec3(1.0f, 0.0f, 0.0f ));
+
+	clydeLarm -> rotation = clyde_Larm_rotation * glm::angleAxis(
+		glm::radians(5.0f * std::sin(wobble * -5.0f  * float(M_PI))),
+		glm::vec3(1.0f, 0.0f, 0.0f ));
+
+	clydeReyestalk -> rotation = clyde_Reyestalk_rotation * glm::angleAxis(
+		glm::radians(5.0f * std::sin(wobble * 5.0f  * float(M_PI))),
+		glm::vec3(0.0f, 0.0f, 1.0f ));
+
+	clydeLeyestalk-> rotation = clyde_Leyestalk_rotation * glm::angleAxis(
+		glm::radians(5.0f * std::sin(wobble * -5.0f  * float(M_PI))),
+		glm::vec3(0.0f, 0.0f, 1.0f ));
+
+	clydeFRleg -> rotation = clyde_FRleg_rotation * glm::angleAxis(
+		glm::radians(5.0f * std::sin(wobble * 5.0f  * float(M_PI))),
+		glm::vec3(0.0f, 0.0f, 1.0f ));
+
+	clydeFLleg -> rotation = clyde_FLleg_rotation * glm::angleAxis(
+		glm::radians(5.0f * std::sin(wobble * -5.0f  * float(M_PI))),
+		glm::vec3(0.0f, 0.0f, 1.0f ));
+
+
+	clydeTRleg -> rotation = clyde_TRleg_rotation * glm::angleAxis(
+		glm::radians(5.0f * std::sin(wobble * 5.0f  * float(M_PI))),
+		glm::vec3(0.0f, 0.0f, 1.0f ));
+
+	clydeTLleg -> rotation = clyde_TLleg_rotation * glm::angleAxis(
+		glm::radians(5.0f * std::sin(wobble * -5.0f  * float(M_PI))),
+		glm::vec3(0.0f, 0.0f, 1.0f ));
+
+	clydeBRleg -> rotation = clyde_BRleg_rotation * glm::angleAxis(
+		glm::radians(5.0f * std::sin(wobble * 5.0f  * float(M_PI))),
+		glm::vec3(0.0f, 0.0f, 1.0f ));
+
+	clydeBLleg -> rotation = clyde_BLleg_rotation * glm::angleAxis(
+		glm::radians(5.0f * std::sin(wobble * -5.0f  * float(M_PI))),
+		glm::vec3(0.0f, 0.0f, 1.0f ));
+
+	clydebody -> position = clyde_body_position  * glm::angleAxis(
+		glm::radians(std::sin(wobble * -5.0f  * float(M_PI))),
+		glm::vec3(0.0f, 0.0f, 1.0f ));
+
+
 	/*if(!record && !soundrec.empty()) //if the record button is not pressed and soundrec is not empty
 	{
 		
@@ -355,7 +481,7 @@ void PlayMode::update(float elapsed) {
 
 	if(simonsays && player.empty())
 	{
-		simon.emplace_back(rand()%2);
+		simon.emplace_back(rand()%3);
 		simonsays = false;
 		timer = 1.0f;
 	}
@@ -366,10 +492,15 @@ void PlayMode::update(float elapsed) {
 		{
 			if(*it == 0)
 			{
+				clyde_head_tip_loop = Sound::play_3D(*clydecry, 1.0f, get_clyde_head_tip_position(), 10.0f); //play the sound
+				clydesquash = 2.5f;
+			}
+			else if(*it == 1)
+			{
 				boops_head_tip_loop = Sound::play_3D(*boopscry, 1.0f, get_boops_head_tip_position(), 10.0f); //play the sound
 				boopssquash = 2.0f;
 			}
-			else if(*it == 1)
+			else if(*it == 2)
 			{
 				tater_head_tip_loop = Sound::play_3D(*tatercry, 1.0f, get_tater_head_tip_position(), 10.0f); //play the sound
 				tatersquash = 2.5f;
@@ -388,18 +519,24 @@ void PlayMode::update(float elapsed) {
 	else //let the player guess the input
 	{
 		simonsays = true;
-		if(space.pressed && tatersquash == -1.0f && boopssquash == -1.0f) //if you squish the creature
+		if(space.pressed && tatersquash == -1.0f && boopssquash == -1.0f && clydesquash == -1.0f) //if you squish the creature
 		{
 			auto it = player.begin();
-			if(*it == 1)
+			
+			if(*it == 0)
 			{
-				tatersquash = 2.5f;
-				tater_head_tip_loop = Sound::play_3D(*tatercry, 1.0f, get_tater_head_tip_position(), 10.0f);
+				clyde_head_tip_loop = Sound::play_3D(*clydecry, 1.0f, get_clyde_head_tip_position(), 10.0f); //play the sound
+				clydesquash = 2.5f;
 			}
-			else if(*it == 0)
-			{	
+			else if(*it == 1)
+			{
 				boopssquash = 2.0f;
 				boops_head_tip_loop = Sound::play_3D(*boopscry, 1.0f, get_boops_head_tip_position(), 10.0f);
+			}
+			else if(*it == 2)
+			{	
+				tatersquash = 2.5f;
+				tater_head_tip_loop = Sound::play_3D(*tatercry, 1.0f, get_tater_head_tip_position(), 10.0f);
 			}
 
 			if(selector == *it) //if the player is right continue on
@@ -421,55 +558,18 @@ void PlayMode::update(float elapsed) {
 	
 	
 
-
-	/*if(hdown.pressed) //if the record button is pressed, set the flags
-	{
-		if(!record) //if it is not already recording, begin to record
-		{
-			record = 1;
-			rectime = 0.0f;
-			soundrec.clear(); //clear the sound list
-		}
-	}
-	if(hup.pressed)
-	{
-		if(record) //if it is already recording end the record
-		{
-			record = 0;
-			timer = 0.0f;
-		}
-	} */
-	
 	tater_squeak(tatersquash,elapsed,taterclosedmouth,tateropenmouth,taterbody);
 	
 	boops_squeak(boopssquash,elapsed,boopsclosedmouth,boopsopenmouth,boopsclosedeye,boopsopeneye,boopsbody, boopsRarm, boopsLarm, boops_Rarm_rotation, boops_Larm_rotation);
 	
+	clyde_squeak(clydesquash,elapsed,clydeclosedmouth,clydeopenmouth,clydeLclosedeye ,clydeRclosedeye,clydeRopeneye, clydeLopeneye,clydebody, clydeRarm, clydeLarm, clyde_Rarm_rotation, clyde_Larm_rotation);
 	//move sound to follow leg tip position:
 	tater_head_tip_loop->set_position(get_tater_head_tip_position(), 1.0f / 60.0f); 
 
 	boops_head_tip_loop->set_position(get_boops_head_tip_position(), 1.0f / 60.0f); 
+
+	clyde_head_tip_loop->set_position(get_clyde_head_tip_position(), 1.0f / 60.0f); 
 	//move camera:
-	{
-
-		//combine inputs into a move:
-		constexpr float PlayerSpeed = 30.0f;
-		glm::vec2 move = glm::vec2(0.0f);
-		if (left.pressed && !right.pressed) move.x =-1.0f;
-		if (!left.pressed && right.pressed) move.x = 1.0f;
-		if (down.pressed && !up.pressed) move.y =-1.0f;
-		if (!down.pressed && up.pressed) move.y = 1.0f;
-
-		//make it so that moving diagonally doesn't go faster:
-		if (move != glm::vec2(0.0f)) move = glm::normalize(move) * PlayerSpeed * elapsed;
-
-		glm::mat4x3 frame = camera->transform->make_local_to_parent();
-		glm::vec3 frame_right = frame[0];
-		//glm::vec3 up = frame[1];
-		glm::vec3 frame_forward = -frame[2];
-
-		camera->transform->position += move.x * frame_right + move.y * frame_forward;
-	}
-
 	{ //update listener to camera position:
 		glm::mat4x3 frame = camera->transform->make_local_to_parent();
 		glm::vec3 frame_right = frame[0];
@@ -556,4 +656,11 @@ glm::vec3 PlayMode::get_boops_head_tip_position() {
 	//the vertex position here was read from the model in blender:
 	return boopshead->make_local_to_world() * glm::vec4(0.0f, 2.2f, 2.2f, 1.0f);
 }
+
+glm::vec3 PlayMode::get_clyde_head_tip_position() {
+	//the vertex position here was read from the model in blender:
+	return clydehead->make_local_to_world() * glm::vec4(0.0f, 1.0f, 2.0f, 1.0f);
+}
+
+
 
